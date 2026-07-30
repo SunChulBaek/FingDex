@@ -16,6 +16,7 @@ class TinipingGridScreen extends StatefulWidget {
 
 class _TinipingGridScreenState extends State<TinipingGridScreen> {
   late Future<List<Tiniping>> _future;
+  static const String _allTabLabel = '전체';
 
   @override
   void initState() {
@@ -31,107 +32,186 @@ class _TinipingGridScreenState extends State<TinipingGridScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('티니핑 도감'),
-        actions: [
-          IconButton(
-            onPressed: _reload,
-            tooltip: '새로고침',
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Tiniping>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _ErrorView(
+    return FutureBuilder<List<Tiniping>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            appBar: _buildAppBar(),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: _buildAppBar(),
+            body: _ErrorView(
               onRetry: _reload,
               errorMessage: snapshot.error.toString(),
-            );
-          }
+            ),
+          );
+        }
 
-          final tinipings = snapshot.data ?? const <Tiniping>[];
-          if (tinipings.isEmpty) {
-            return const Center(child: Text('표시할 티니핑 데이터가 없습니다.'));
-          }
+        final tinipings = snapshot.data ?? const <Tiniping>[];
+        if (tinipings.isEmpty) {
+          return Scaffold(
+            appBar: _buildAppBar(),
+            body: const Center(child: Text('표시할 티니핑 데이터가 없습니다.')),
+          );
+        }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = switch (constraints.maxWidth) {
-                > 1200 => 5,
-                > 900 => 4,
-                > 600 => 3,
-                _ => 3,
-              };
+        final releaseTabs = _buildReleaseTabs(tinipings);
+        return DefaultTabController(
+          length: releaseTabs.length,
+          child: Scaffold(
+            appBar: _buildAppBar(
+              bottom: TabBar(
+                isScrollable: true,
+                tabs: releaseTabs.map((tab) => Tab(text: tab)).toList(),
+              ),
+            ),
+            body: TabBarView(
+              children: releaseTabs.map((tab) {
+                final filtered = tab == _allTabLabel
+                    ? tinipings
+                    : tinipings
+                          .where((item) => item.releaseVersion == tab)
+                          .toList();
+                return _TinipingGrid(items: filtered);
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-              return GridView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: tinipings.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.72,
-                ),
-                itemBuilder: (context, index) {
-                  final item = tinipings[index];
-                  final heroTag = 'tiniping-${item.id}-${item.name}';
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 1.5,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => TinipingDetailScreen(tiniping: item),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Hero(
-                              tag: heroTag,
-                              child: TinipingImage(imageUrl: item.imageUrl),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
-                            child: Text(
-                              item.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                          if (item.type.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                              child: Text(
-                                item.type,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            )
-                          else
-                            const SizedBox(height: 10),
-                        ],
-                      ),
+  AppBar _buildAppBar({PreferredSizeWidget? bottom}) {
+    return AppBar(
+      title: const Text('티니핑 도감'),
+      bottom: bottom,
+      actions: [
+        IconButton(
+          onPressed: _reload,
+          tooltip: '새로고침',
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    );
+  }
+
+  List<String> _buildReleaseTabs(List<Tiniping> items) {
+    final versions = items
+        .map((item) => item.releaseVersion.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort(_compareReleaseVersionDesc);
+
+    return [_allTabLabel, ...versions];
+  }
+
+  int _compareReleaseVersionDesc(String a, String b) {
+    final aNum = _extractLeadingNumber(a);
+    final bNum = _extractLeadingNumber(b);
+
+    if (aNum != null && bNum != null && aNum != bNum) {
+      return bNum.compareTo(aNum);
+    }
+    if (aNum != null && bNum == null) {
+      return -1;
+    }
+    if (aNum == null && bNum != null) {
+      return 1;
+    }
+    return b.compareTo(a);
+  }
+
+  int? _extractLeadingNumber(String value) {
+    final match = RegExp(r'(\d+)').firstMatch(value);
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+}
+
+class _TinipingGrid extends StatelessWidget {
+  const _TinipingGrid({required this.items});
+
+  final List<Tiniping> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const Center(child: Text('해당 버전에 데이터가 없습니다.'));
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = switch (constraints.maxWidth) {
+          > 1200 => 5,
+          > 900 => 4,
+          > 600 => 3,
+          _ => 3,
+        };
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.72,
+          ),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final heroTag = 'tiniping-${item.id}-${item.name}';
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              elevation: 1.5,
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TinipingDetailScreen(tiniping: item),
                     ),
                   );
                 },
-              );
-            },
-          );
-        },
-      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: Hero(
+                        tag: heroTag,
+                        child: TinipingImage(imageUrl: item.imageUrl),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+                      child: Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    if (item.type.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                        child: Text(
+                          item.type,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

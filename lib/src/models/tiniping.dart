@@ -4,6 +4,7 @@ class Tiniping {
     required this.name,
     required this.imageUrl,
     required this.type,
+    required this.releaseVersion,
     required this.description,
     required this.extraFields,
   });
@@ -12,6 +13,7 @@ class Tiniping {
   final String name;
   final String imageUrl;
   final String type;
+  final String releaseVersion;
   final String description;
   final Map<String, String> extraFields;
 }

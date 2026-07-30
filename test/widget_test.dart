@@ -12,6 +12,7 @@ class _FakeTinipingRepository implements TinipingRepository {
         name: '하츄핑',
         imageUrl: '',
         type: '사랑',
+        releaseVersion: '1기 캐치! 티니핑',
         description: '사랑이 많은 티니핑',
         extraFields: {},
       ),

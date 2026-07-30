@@ -56,6 +56,15 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
     '소개',
     '특징',
   ];
+  static final List<String> _releaseVersionCandidates = [
+    'release_version',
+    'releaseversion',
+    'release',
+    'version',
+    '시즌',
+    '출시',
+    '출시버전',
+  ];
 
   @override
   Future<List<Tiniping>> fetchTinipings() async {
@@ -117,6 +126,7 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
       final imageUrl = pick(_imageCandidates);
       final type = pick(_typeCandidates);
       final description = pick(_descriptionCandidates);
+      final releaseVersion = pick(_releaseVersionCandidates);
 
       final extras = <String, String>{};
       final coreFields = {
@@ -125,6 +135,7 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
         ..._imageCandidates.map(_normalizeKey),
         ..._typeCandidates.map(_normalizeKey),
         ..._descriptionCandidates.map(_normalizeKey),
+        ..._releaseVersionCandidates.map(_normalizeKey),
       };
       rowMap.forEach((key, value) {
         if (value.isEmpty) {
@@ -142,6 +153,7 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
           name: name,
           imageUrl: imageUrl,
           type: type,
+          releaseVersion: releaseVersion,
           description: description,
           extraFields: extras,
         ),
