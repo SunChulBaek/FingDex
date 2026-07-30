@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:csv/csv.dart';
 import 'package:http/http.dart' as http;
 
@@ -62,7 +64,10 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
     if (response.statusCode != 200) {
       throw Exception('시트 데이터를 불러오지 못했습니다. (${response.statusCode})');
     }
-    final body = response.body;
+    final body = utf8.decode(response.bodyBytes, allowMalformed: true).replaceFirst(
+      '\uFEFF',
+      '',
+    );
     if (body.trimLeft().startsWith('<!DOCTYPE html>')) {
       throw Exception('시트가 공개되지 않았거나 CSV 내보내기가 허용되지 않았습니다.');
     }

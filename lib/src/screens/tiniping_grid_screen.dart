@@ -66,7 +66,7 @@ class _TinipingGridScreenState extends State<TinipingGridScreen> {
                 > 1200 => 5,
                 > 900 => 4,
                 > 600 => 3,
-                _ => 2,
+                _ => 3,
               };
 
               return GridView.builder(
