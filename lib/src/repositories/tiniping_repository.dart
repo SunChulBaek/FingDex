@@ -15,6 +15,45 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
 
   final String sheetUrl;
   final http.Client _client;
+  static final List<String> _idCandidates = [
+    'id',
+    '번호',
+    'no',
+    '순번',
+    'index',
+  ];
+  static final List<String> _nameCandidates = [
+    'name',
+    'name_ko',
+    'namekr',
+    '이름',
+    '티니핑',
+    '캐릭터',
+    '캐릭터명',
+  ];
+  static final List<String> _imageCandidates = [
+    'image',
+    'image_url',
+    'imageurl',
+    'img',
+    '이미지',
+    '사진',
+    '썸네일',
+  ];
+  static final List<String> _typeCandidates = [
+    'type',
+    'types',
+    '속성',
+    '분류',
+    '시즌',
+  ];
+  static final List<String> _descriptionCandidates = [
+    'description',
+    'quote',
+    '설명',
+    '소개',
+    '특징',
+  ];
 
   @override
   Future<List<Tiniping>> fetchTinipings() async {
@@ -23,10 +62,14 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
     if (response.statusCode != 200) {
       throw Exception('시트 데이터를 불러오지 못했습니다. (${response.statusCode})');
     }
+    final body = response.body;
+    if (body.trimLeft().startsWith('<!DOCTYPE html>')) {
+      throw Exception('시트가 공개되지 않았거나 CSV 내보내기가 허용되지 않았습니다.');
+    }
 
     final rows = const CsvToListConverter(
       shouldParseNumbers: false,
-    ).convert(response.body);
+    ).convert(body);
     if (rows.length < 2) {
       return const [];
     }
@@ -59,59 +102,31 @@ class GoogleSheetTinipingRepository implements TinipingRepository {
         return '';
       }
 
-      final name = pick(['name', '이름', '티니핑', '캐릭터', '캐릭터명']);
+      final name = pick(_nameCandidates);
       if (name.isEmpty) {
         continue;
       }
 
-      final id =
-          pick(['id', '번호', 'no', '순번', 'index']).isEmpty
-          ? '$i'
-          : pick(['id', '번호', 'no', '순번', 'index']);
-
-      final imageUrl = pick([
-        'image',
-        'image_url',
-        'img',
-        '이미지',
-        '사진',
-        '썸네일',
-      ]);
-      final type = pick(['type', '속성', '분류', '시즌']);
-      final description = pick(['description', '설명', '소개', '특징']);
+      final pickedId = pick(_idCandidates);
+      final id = pickedId.isEmpty ? '$i' : pickedId;
+      final imageUrl = pick(_imageCandidates);
+      final type = pick(_typeCandidates);
+      final description = pick(_descriptionCandidates);
 
       final extras = <String, String>{};
+      final coreFields = {
+        ..._idCandidates.map(_normalizeKey),
+        ..._nameCandidates.map(_normalizeKey),
+        ..._imageCandidates.map(_normalizeKey),
+        ..._typeCandidates.map(_normalizeKey),
+        ..._descriptionCandidates.map(_normalizeKey),
+      };
       rowMap.forEach((key, value) {
         if (value.isEmpty) {
           return;
         }
         final normalizedKey = _normalizeKey(key);
-        final isCoreField = normalizedKey == _normalizeKey('id') ||
-            normalizedKey == _normalizeKey('번호') ||
-            normalizedKey == _normalizeKey('no') ||
-            normalizedKey == _normalizeKey('순번') ||
-            normalizedKey == _normalizeKey('index') ||
-            normalizedKey == _normalizeKey('name') ||
-            normalizedKey == _normalizeKey('이름') ||
-            normalizedKey == _normalizeKey('티니핑') ||
-            normalizedKey == _normalizeKey('캐릭터') ||
-            normalizedKey == _normalizeKey('캐릭터명') ||
-            normalizedKey == _normalizeKey('image') ||
-            normalizedKey == _normalizeKey('image_url') ||
-            normalizedKey == _normalizeKey('img') ||
-            normalizedKey == _normalizeKey('이미지') ||
-            normalizedKey == _normalizeKey('사진') ||
-            normalizedKey == _normalizeKey('썸네일') ||
-            normalizedKey == _normalizeKey('type') ||
-            normalizedKey == _normalizeKey('속성') ||
-            normalizedKey == _normalizeKey('분류') ||
-            normalizedKey == _normalizeKey('시즌') ||
-            normalizedKey == _normalizeKey('description') ||
-            normalizedKey == _normalizeKey('설명') ||
-            normalizedKey == _normalizeKey('소개') ||
-            normalizedKey == _normalizeKey('특징');
-
-        if (!isCoreField) {
+        if (!coreFields.contains(normalizedKey)) {
           extras[key] = value;
         }
       });
