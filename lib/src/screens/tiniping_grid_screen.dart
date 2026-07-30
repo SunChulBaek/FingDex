@@ -49,7 +49,10 @@ class _TinipingGridScreenState extends State<TinipingGridScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return _ErrorView(onRetry: _reload);
+            return _ErrorView(
+              onRetry: _reload,
+              errorMessage: snapshot.error.toString(),
+            );
           }
 
           final tinipings = snapshot.data ?? const <Tiniping>[];
@@ -134,9 +137,13 @@ class _TinipingGridScreenState extends State<TinipingGridScreen> {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.onRetry});
+  const _ErrorView({
+    required this.onRetry,
+    required this.errorMessage,
+  });
 
   final VoidCallback onRetry;
+  final String errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +158,12 @@ class _ErrorView extends StatelessWidget {
               '시트를 "링크가 있는 모든 사용자에게 공개" 또는 '
               '"웹에 게시"로 설정했는지 확인해주세요.',
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
