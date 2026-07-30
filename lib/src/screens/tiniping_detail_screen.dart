@@ -12,6 +12,13 @@ class TinipingDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleExtraEntries = tiniping.extraFields.entries.where((entry) {
+      final normalizedKey = entry.key.toLowerCase().replaceAll(' ', '');
+      return normalizedKey != 'c' &&
+          normalizedKey != '번호' &&
+          normalizedKey != 'id';
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(title: Text(tiniping.name)),
       body: ListView(
@@ -41,11 +48,11 @@ class TinipingDetailScreen extends StatelessWidget {
               tiniping.description,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
-          if (tiniping.extraFields.isNotEmpty) ...[
+          if (visibleExtraEntries.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text('상세 정보', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            ...tiniping.extraFields.entries.map(
+            ...visibleExtraEntries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
