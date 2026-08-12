@@ -1,6 +1,6 @@
 {
-    "name": "fingdex",
-    "short_name": "fingdex",
+    "name": "티니핑 도감",
+    "short_name": "티니핑 도감",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
